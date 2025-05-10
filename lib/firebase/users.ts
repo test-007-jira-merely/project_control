@@ -62,3 +62,35 @@ export async function getPendingUsers() {
     throw error
   }
 }
+
+export async function getUser(uid: string) {
+  try {
+    const userDoc = await getDoc(doc(db, "users", uid))
+
+    if (!userDoc.exists()) {
+      throw new Error("Користувача не знайдено")
+    }
+
+    return {
+      id: userDoc.id,
+      ...userDoc.data(),
+    }
+  } catch (error) {
+    console.error("Error getting user:", error)
+    throw error
+  }
+}
+
+export async function updateUser(uid: string, userData: Partial<{ displayName: string; email: string }>) {
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      ...userData,
+      updatedAt: new Date(),
+    })
+
+    return true
+  } catch (error) {
+    console.error("Error updating user:", error)
+    throw error
+  }
+}

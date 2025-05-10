@@ -1,4 +1,4 @@
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
+import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "./config"
 
 export async function getRecentActivity(limitCount = 5) {
@@ -32,6 +32,23 @@ export async function logActivity(
   userId: string,
   userName: string,
 ) {
-  // Тут буде логіка для запису активності в Firestore
-  // Для спрощення, залишаємо цю функцію порожньою
+  try {
+    const activityRef = collection(db, "activity")
+
+    await addDoc(activityRef, {
+      type,
+      action,
+      title,
+      timestamp: serverTimestamp(),
+      user: {
+        id: userId,
+        name: userName,
+      },
+    })
+
+    return true
+  } catch (error) {
+    console.error("Error logging activity:", error)
+    return false
+  }
 }

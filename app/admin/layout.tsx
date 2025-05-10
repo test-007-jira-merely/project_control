@@ -2,13 +2,13 @@ import type React from "react"
 import { SiteHeader } from "@/components/site-header"
 import { AuthGuard } from "@/components/auth-guard"
 
-interface DashboardLayoutProps {
+interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <AuthGuard allowedRoles={["user", "admin"]}>
+    <AuthGuard allowedRoles={["admin"]}>
       <div className="flex min-h-screen flex-col">
         <SiteHeader />
         <div className="container flex-1 space-y-4 p-8 pt-6">{children}</div>

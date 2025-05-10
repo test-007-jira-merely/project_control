@@ -15,24 +15,19 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
   const routes = [
     {
       href: "/dashboard",
-      label: "Дашборд",
+      label: "Dashboard",
       active: pathname === "/dashboard",
     },
     {
       href: "/projects",
-      label: "Проекти",
+      label: "Projects",
       active: pathname === "/projects" || pathname.startsWith("/projects/"),
-    },
-    {
-      href: "/tasks",
-      label: "Задачі",
-      active: pathname === "/tasks" || pathname.startsWith("/tasks/"),
     },
     ...(isAdmin
       ? [
           {
             href: "/admin",
-            label: "Адміністрування",
+            label: "Admin page",
             active: pathname === "/admin" || pathname.startsWith("/admin/"),
           },
         ]
