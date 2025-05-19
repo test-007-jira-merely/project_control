@@ -71,6 +71,7 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
         try {
           const projectMembers = await getProjectMembers(projectId)
           setMembers(projectMembers)
+          console.log("Fetched members:", projectMembers)
         } catch (error) {
           console.error("Error fetching members:", error)
         }
@@ -197,31 +198,6 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="assignedTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Призначити</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Виберіть виконавця" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Не призначено</SelectItem>
-                      {members.map((member) => (
-                        <SelectItem key={member.userId} value={member.userId}>
-                          {member.user.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="dueDate"

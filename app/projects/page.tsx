@@ -15,26 +15,26 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      if (!user) return
-
-      try {
-        const userProjects = await getUserProjects(user.uid)
-        setProjects(userProjects)
-      } catch (error) {
-        console.error("Error fetching projects:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchProjects()
   }, [user])
+
+  const fetchProjects = async () => {
+    if (!user) return
+
+    try {
+      const userProjects = await getUserProjects(user.uid)
+      setProjects(userProjects)
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <DashboardShell>
       <DashboardHeader heading="Projects" text="Керуйте своїми проектами та задачами.">
-        <ProjectCreateButton />
+        <ProjectCreateButton onProjectCreated={fetchProjects} />
       </DashboardHeader>
 
       {loading ? (
@@ -58,7 +58,7 @@ export default function ProjectsPage() {
             <p className="mb-4 mt-2 text-sm text-muted-foreground">
               У вас ще немає проектів. Створіть свій перший проект, щоб почати роботу.
             </p>
-            <ProjectCreateButton variant="default" />
+            <ProjectCreateButton onProjectCreated={fetchProjects} />
           </div>
         </div>
       )}

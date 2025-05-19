@@ -1,24 +1,36 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ProjectCreateDialog } from "@/components/projects/project-create-dialog"
+import { Button, ButtonProps } from "@/components/ui/button"
+import { ProjectCreateDialog } from "./project-create-dialog"
+import { PlusCircle } from "lucide-react"
 
-interface ProjectCreateButtonProps {
-  variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive"
+export interface ProjectCreateButtonProps extends ButtonProps {
+  onProjectCreated?: () => Promise<void>;
 }
 
-export function ProjectCreateButton({ variant = "outline" }: ProjectCreateButtonProps) {
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
+export function ProjectCreateButton({ 
+  onProjectCreated = async () => {}, 
+  variant = "outline", 
+  ...props 
+}: ProjectCreateButtonProps) {
+  const [open, setOpen] = useState(false)
 
   return (
     <>
-      <Button variant={variant} onClick={() => setShowCreateDialog(true)}>
-        <Plus className="mr-2 h-4 w-4" />
+      <Button 
+        variant={variant}
+        onClick={() => setOpen(true)} 
+        {...props}
+      >
+        <PlusCircle className="mr-2 h-4 w-4" />
         Новий проект
       </Button>
-      <ProjectCreateDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
+      <ProjectCreateDialog
+        open={open}
+        onOpenChange={setOpen}
+        onProjectCreated={onProjectCreated}
+      />
     </>
   )
 }

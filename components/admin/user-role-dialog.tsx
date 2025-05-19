@@ -21,6 +21,7 @@ interface User {
   displayName: string | null
   email: string | null
   role: UserRole
+  createdAt: any
 }
 
 interface UserRoleDialogProps {

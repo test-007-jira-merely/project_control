@@ -4,18 +4,11 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CalendarIcon, Link2Icon, GitBranchIcon } from "lucide-react"
+import { CalendarIcon, Link2Icon, GitBranchIcon, Save } from "lucide-react"
 import { format } from "date-fns"
 import { uk } from "date-fns/locale"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -24,10 +17,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
-import { createProject } from "@/lib/firebase/database"
+import { updateProject } from "@/lib/firebase/database"
 import type { Project } from "@/lib/firebase/database"
-
-const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
 
 const formSchema = z.object({
   name: z.string().min(3, {
@@ -41,51 +32,49 @@ const formSchema = z.object({
   }),
   taskLink: z.string().url({ message: "Введіть правильне URL" }).optional().or(z.literal("")),
   gitRepository: z.string().url({ message: "Введіть правильне URL" }).optional().or(z.literal("")),
-  startDate: z.date().optional()??new Date().setUTCDate,
-  endDate: z.date().optional(),
+  startDate: z.date().optional().nullable(),
+  endDate: z.date().optional().nullable(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
-interface ProjectCreateDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onProjectCreated: () => void
+interface ProjectDetailsProps {
+  project: Project
+  onProjectUpdated: (project: Project) => void
 }
 
-export function ProjectCreateDialog({ open, onOpenChange, onProjectCreated }: ProjectCreateDialogProps) {
+export function ProjectDetails({ project, onProjectUpdated }: ProjectDetailsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      status: "planning",
-      taskLink: "",
-      gitRepository: "",
-      startDate: new Date(),
+      name: project.name,
+      description: project.description,
+      status: project.status,
+      taskLink: project.taskLink || "",
+      gitRepository: project.gitRepository || "",
+      startDate: project.startDate,
+      endDate: project.endDate,
     },
   })
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
     try {
-      const newProject = await createProject(data)
+      const updatedProject = await updateProject(project.id, data)
+      onProjectUpdated(updatedProject)
       toast({
-        title: "Проект створено",
-        description: "Ваш новий проект успішно створено",
+        title: "Проект оновлено",
+        description: "Дані проекту успішно оновлено",
       })
-      form.reset()
-      onProjectCreated()
-      onOpenChange(false)
     } catch (error) {
-      console.error("Error creating project:", error)
+      console.error("Error updating project:", error)
       toast({
         variant: "destructive",
         title: "Помилка",
-        description: "Не вдалося створити проект. Спробуйте ще раз.",
+        description: "Не вдалося оновити проект. Спробуйте ще раз.",
       })
     } finally {
       setIsSubmitting(false)
@@ -93,12 +82,12 @@ export function ProjectCreateDialog({ open, onOpenChange, onProjectCreated }: Pr
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Створити новий проект</DialogTitle>
-          <DialogDescription>Заповніть форму нижче, щоб створити новий проект</DialogDescription>
-        </DialogHeader>
+    <Card className="bg-card">
+      <CardHeader>
+        <CardTitle>Деталі проекту</CardTitle>
+        <CardDescription>Перегляд та редагування інформації про проект</CardDescription>
+      </CardHeader>
+      <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -184,7 +173,39 @@ export function ProjectCreateDialog({ open, onOpenChange, onProjectCreated }: Pr
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Дата початку</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? format(field.value, "PPP", { locale: uk }) : <span>Виберіть дату</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription>Необов&apos;язкове поле</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="endDate"
@@ -204,22 +225,36 @@ export function ProjectCreateDialog({ open, onOpenChange, onProjectCreated }: Pr
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
+                    <FormDescription>Необов&apos;язкове поле</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            <DialogFooter>
+            <CardFooter className="flex justify-end px-0 pb-0">
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Створення..." : "Створити проект"}
+                {isSubmitting ? (
+                  <>
+                    <Save className="mr-2 h-4 w-4 animate-spin" /> Збереження...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" /> Зберегти зміни
+                  </>
+                )}
               </Button>
-            </DialogFooter>
+            </CardFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   )
 }

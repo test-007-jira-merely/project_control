@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { getUserStats } from "@/lib/firebase/stats"
 import { cn } from "@/lib/utils"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 
 interface UserStatsProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -34,8 +35,15 @@ export function UserStats({ className, ...props }: UserStatsProps) {
     fetchStats()
   }, [])
 
+  const COLORS = ["#00C49F", "#FFBB28"]
+
+  const completionData = [
+    { name: "Завершено", value: stats.tasksCompleted },
+    { name: "В процесі", value: stats.tasksAssigned - stats.tasksCompleted },
+  ]
+
   return (
-    <Card className={cn("col-span-3", className)} {...props}>
+    <Card className={cn("col-span-3 bg-card", className)} {...props}>
       <CardHeader>
         <CardTitle>Ваша статистика</CardTitle>
         <CardDescription>Ваш прогрес та активність</CardDescription>
@@ -48,8 +56,9 @@ export function UserStats({ className, ...props }: UserStatsProps) {
               {stats.tasksCompleted} / {stats.tasksAssigned}
             </div>
           </div>
-          <Progress value={stats.completionRate} />
+          <Progress value={stats.completionRate} className="h-2" />
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <div className="text-sm font-medium">Задачі виконано</div>
@@ -60,6 +69,30 @@ export function UserStats({ className, ...props }: UserStatsProps) {
             <div className="text-2xl font-bold">{stats.projectsInvolved}</div>
           </div>
         </div>
+
+        {stats.tasksAssigned > 0 && (
+          <div className="mt-4 h-[180px]">
+            <h3 className="mb-2 text-center text-sm font-medium">Прогрес виконання задач</h3>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={completionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={60}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {completionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name) => [`${value} задач`, name]} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

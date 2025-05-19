@@ -209,32 +209,6 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
             </div>
             <FormField
               control={form.control}
-              name="assignedTo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Призначити</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Виберіть виконавця" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {/* Use "unassigned" instead of empty string */}
-                      <SelectItem value="unassigned">Не призначено</SelectItem>
-                      {members.map((member) => (
-                        <SelectItem key={member.userId} value={member.userId}>
-                          {member.user.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="dueDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">

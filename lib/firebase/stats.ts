@@ -17,10 +17,18 @@ export async function getProjectStats() {
     const completedSnapshot = await getDocs(completedQuery)
     const completed = completedSnapshot.size
 
-    return { total, active, completed }
+    const planningQuery = query(projectsRef, where("status", "==", "planning"))
+    const planningSnapshot = await getDocs(planningQuery)
+    const planning = planningSnapshot.size
+
+    const archivedQuery = query(projectsRef, where("status", "==", "archived"))
+    const archivedSnapshot = await getDocs(archivedQuery)
+    const archived = archivedSnapshot.size
+
+    return { total, active, completed, planning, archived }
   } catch (error) {
     console.error("Error getting project stats:", error)
-    return { total: 0, active: 0, completed: 0 }
+    return { total: 0, active: 0, completed: 0, planning: 0, archived: 0 }
   }
 }
 
@@ -39,14 +47,18 @@ export async function getTaskStats() {
     const inProgressSnapshot = await getDocs(inProgressQuery)
     const inProgress = inProgressSnapshot.size
 
+    const reviewQuery = query(tasksRef, where("status", "==", "review"))
+    const reviewSnapshot = await getDocs(reviewQuery)
+    const review = reviewSnapshot.size
+
     const completedQuery = query(tasksRef, where("status", "==", "completed"))
     const completedSnapshot = await getDocs(completedQuery)
     const completed = completedSnapshot.size
 
-    return { total, todo, inProgress, completed }
+    return { total, todo, inProgress, review, completed }
   } catch (error) {
     console.error("Error getting task stats:", error)
-    return { total: 0, todo: 0, inProgress: 0, completed: 0 }
+    return { total: 0, todo: 0, inProgress: 0, review: 0, completed: 0 }
   }
 }
 

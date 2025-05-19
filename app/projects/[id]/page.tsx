@@ -73,12 +73,34 @@ export default function ProjectPage() {
       <DashboardHeader heading={project.name} text={project.description} />
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Огляд</TabsTrigger>
-          <TabsTrigger value="tasks">Задачі</TabsTrigger>
-          <TabsTrigger value="members">Учасники</TabsTrigger>
-          {canEdit && <TabsTrigger value="settings">Налаштування</TabsTrigger>}
-        </TabsList>
+      <TabsList className="gap-5">
+        <TabsTrigger 
+          value="overview" 
+          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+        >
+          Огляд
+        </TabsTrigger>
+        <TabsTrigger 
+          value="tasks" 
+          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+        >
+          Задачі
+        </TabsTrigger>
+        <TabsTrigger 
+          value="members" 
+          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+        >
+          Учасники
+        </TabsTrigger>
+        {canEdit && (
+          <TabsTrigger 
+            value="settings" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+          >
+            Налаштування
+          </TabsTrigger>
+        )}
+      </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <ProjectOverview project={project} />
         </TabsContent>
@@ -86,7 +108,7 @@ export default function ProjectPage() {
           <ProjectTasks projectId={id} canEdit={canEdit} />
         </TabsContent>
         <TabsContent value="members" className="space-y-4">
-          <ProjectMembers projectId={id} userRole={userRole} />
+          <ProjectMembers projectId={id} />
         </TabsContent>
         {canEdit && (
           <TabsContent value="settings" className="space-y-4">

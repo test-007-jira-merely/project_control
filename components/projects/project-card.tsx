@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { uk } from "date-fns/locale"
+import { Link2Icon, GitBranchIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Project } from "@/lib/firebase/database"
@@ -20,7 +21,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const status = statusMap[project.status] || statusMap.planning
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden bg-card">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <CardTitle className="line-clamp-1 text-xl">{project.name}</CardTitle>
@@ -48,6 +49,36 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 month: "long",
                 year: "numeric",
               })}
+            </div>
+          )}
+
+          {/* Посилання на завдання */}
+          {project.taskLink && (
+            <div className="flex items-center text-sm">
+              <Link2Icon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+              <a
+                href={project.taskLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline truncate"
+              >
+                Завдання
+              </a>
+            </div>
+          )}
+
+          {/* Посилання на Git репозиторій */}
+          {project.gitRepository && (
+            <div className="flex items-center text-sm">
+              <GitBranchIcon className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+              <a
+                href={project.gitRepository}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline truncate"
+              >
+                Git репозиторій
+              </a>
             </div>
           )}
         </div>

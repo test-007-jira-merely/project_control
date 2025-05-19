@@ -12,6 +12,7 @@ import {
   addDoc,
   type Timestamp,
   setDoc,
+  documentId,
 } from "firebase/firestore"
 import { db, auth } from "./config"
 import { logActivity } from "./activity"
@@ -27,6 +28,9 @@ export interface Project {
   createdBy: string
   createdAt: Timestamp
   updatedAt: Timestamp
+  taskLink?: string
+  members?: string[] // Додано для зберігання ID учасників проекту
+  gitRepository?: string // Додано для зберігання посилання на репозиторій
 }
 
 export interface Task {
@@ -41,6 +45,7 @@ export interface Task {
   createdBy: string
   createdAt: Timestamp
   updatedAt: Timestamp
+  projectName?: string // Додано для зберігання назви проекту
 }
 
 export interface ProjectMember {
@@ -376,132 +381,6 @@ export async function getUserTasks(userId: string) {
   }
 }
 
-// Функції для роботи з учасниками проекту
-// Змінюємо функцію addProjectMember
-export async function addProjectMember(projectId: string, userId: string, role: ProjectMember["role"]) {
-  try {
-    const user = auth.currentUser
-    if (!user) throw new Error("Користувач не авторизований")
-
-    // Створюємо ID у форматі userId_projectId
-    const memberId = `${userId}_${projectId}`
-
-    // Перевіряємо, чи користувач вже є учасником проекту
-    const memberDoc = await getDoc(doc(db, "projectMembers", memberId))
-
-    if (memberDoc.exists()) {
-      // Якщо користувач вже є учасником, оновлюємо його роль
-      await updateDoc(doc(db, "projectMembers", memberId), {
-        role,
-      })
-
-      return { id: memberId, ...memberDoc.data(), role }
-    }
-
-    // Додаємо нового учасника
-    const newMember = {
-      projectId,
-      userId,
-      role,
-      joinedAt: serverTimestamp(),
-    }
-
-    await setDoc(doc(db, "projectMembers", memberId), newMember)
-
-    // Отримуємо інформацію про користувача
-    const userDoc = await getDoc(doc(db, "users", userId))
-    const userData = userDoc.data()
-
-    // Логуємо активність
-    await logActivity(
-      "user",
-      "create",
-      `${userData?.displayName || "Користувач"} доданий до проекту`,
-      user.uid,
-      user.displayName || "Користувач",
-    )
-
-    return { id: memberId, ...newMember }
-  } catch (error) {
-    console.error("Error adding project member:", error)
-    throw error
-  }
-}
-
-// Змінюємо функцію removeProjectMember
-export async function removeProjectMember(projectId: string, userId: string) {
-  try {
-    const user = auth.currentUser
-    if (!user) throw new Error("Користувач не авторизований")
-
-    // Створюємо ID у форматі userId_projectId
-    const memberId = `${userId}_${projectId}`
-
-    // Перевіряємо, чи існує запис
-    const memberDoc = await getDoc(doc(db, "projectMembers", memberId))
-
-    if (!memberDoc.exists()) {
-      throw new Error("Учасника не знайдено")
-    }
-
-    // Видаляємо учасника
-    await deleteDoc(doc(db, "projectMembers", memberId))
-
-    // Отримуємо інформацію про користувача
-    const userDoc = await getDoc(doc(db, "users", userId))
-    const userData = userDoc.data()
-
-    // Логуємо активність
-    await logActivity(
-      "user",
-      "delete",
-      `${userData?.displayName || "Користувач"} видалений з проекту`,
-      user.uid,
-      user.displayName || "Користувач",
-    )
-
-    return true
-  } catch (error) {
-    console.error("Error removing project member:", error)
-    throw error
-  }
-}
-
-// Змінюємо функцію getProjectMembers
-export async function getProjectMembers(projectId: string) {
-  try {
-    const membersQuery = query(collection(db, "projectMembers"), where("projectId", "==", projectId))
-
-    const membersSnapshot = await getDocs(membersQuery)
-
-    const members = []
-
-    for (const memberDoc of membersSnapshot.docs) {
-      const memberData = memberDoc.data()
-
-      // Отримуємо інформацію про користувача
-      const userDoc = await getDoc(doc(db, "users", memberData.userId))
-      const userData = userDoc.data()
-
-      members.push({
-        id: memberDoc.id,
-        ...memberData,
-        user: {
-          id: memberData.userId,
-          displayName: userData?.displayName || "Користувач",
-          email: userData?.email || "",
-          role: userData?.role || "guest",
-        },
-      })
-    }
-
-    return members
-  } catch (error) {
-    console.error("Error getting project members:", error)
-    throw error
-  }
-}
-
 // Змінюємо функцію getUserProjectRole
 export async function getUserProjectRole(projectId: string, userId: string) {
   try {
@@ -517,6 +396,366 @@ export async function getUserProjectRole(projectId: string, userId: string) {
     return memberDoc.data().role
   } catch (error) {
     console.error("Error getting user project role:", error)
+    throw error
+  }
+}
+export async function getTasksInReview(): Promise<Task[]> {
+  try {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error("User not authenticated")
+    }
+
+    // Отримуємо проекти, в яких користувач є учасником або власником
+    const projectMembersQuery = query(collection(db, "projectMembers"), where("userId", "==", user.uid))
+    const projectMembersSnapshot = await getDocs(projectMembersQuery)
+
+    const projectIds = projectMembersSnapshot.docs.map((doc) => doc.data().projectId)
+
+    // Якщо користувач не є учасником жодного проекту, повертаємо пустий масив
+    if (projectIds.length === 0) {
+      return []
+    }
+
+    // Отримуємо задачі зі статусом "review" з проектів, в яких користувач є учасником
+    const tasksQuery = query(
+      collection(db, "tasks"),
+      where("projectId", "in", projectIds),
+      where("status", "==", "review"),
+    )
+
+    const tasksSnapshot = await getDocs(tasksQuery)
+
+    const tasks: Task[] = []
+
+    // Отримуємо дані про проекти для відображення назви проекту
+    const projectsSnapshot = await getDocs(query(collection(db, "projects"), where(documentId(), "in", projectIds)))
+
+    const projectsMap = new Map()
+    projectsSnapshot.forEach((doc) => {
+      projectsMap.set(doc.id, doc.data().name)
+    })
+
+    tasksSnapshot.forEach((doc) => {
+      const taskData = doc.data() as Task
+      tasks.push({
+        ...taskData,
+        id: doc.id,
+        projectName: projectsMap.get(taskData.projectId) || "Невідомий проект",
+      })
+    })
+
+    // Сортуємо за датою оновлення (спочатку найновіші)
+    return tasks.sort((a, b) => {
+      const dateA = a.updatedAt?.seconds || a.createdAt.seconds
+      const dateB = b.updatedAt?.seconds || b.createdAt.seconds
+      return dateB - dateA
+    })
+  } catch (error) {
+    console.error("Error getting tasks in review:", error)
+    throw error
+  }
+}
+export async function updateTaskStatus(taskId: string, status: string): Promise<void> {
+  try {
+    const taskRef = doc(db, "tasks", taskId)
+
+    await updateDoc(taskRef, {
+      status,
+      updatedAt: serverTimestamp(),
+    })
+
+    // Додаємо запис про активність
+    const user = auth.currentUser
+    if (user) {
+      await addDoc(collection(db, "activities"), {
+        type: "task",
+        action: status === "completed" ? "complete" : "update",
+        taskId,
+        userId: user.uid,
+        userName: user.displayName || user.email,
+        timestamp: serverTimestamp(),
+      })
+    }
+  } catch (error) {
+    console.error("Error updating task status:", error)
+    throw error
+  }
+}
+
+
+// Отримання учасників проекту
+export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  try {
+    const membersQuery = query(
+      collection(db, "projectMembers"),
+      where("projectId", "==", projectId),
+      orderBy("addedAt", "desc"),
+    )
+
+    const membersSnapshot = await getDocs(membersQuery)
+    const members: ProjectMember[] = []
+
+    membersSnapshot.forEach((doc) => {
+      const data = doc.data()
+      members.push({
+        id: doc.id,
+        projectId: data.projectId,
+        userId: data.userId,
+        userName: data.userName,
+        userEmail: data.userEmail,
+        role: data.role,
+        addedAt: data.addedAt,
+      })
+    })
+
+    return members
+  } catch (error) {
+    console.error("Error getting project members:", error)
+    throw error
+  }
+}
+
+// Пошук користувачів за email
+export async function searchUsersByEmail(email: string): Promise<User[]> {
+  try {
+    // В реальному додатку тут має бути безпечний спосіб пошуку користувачів
+    // Наприклад, через Cloud Functions або спеціальний API
+    // Для демонстрації використаємо простий пошук за email
+
+    const usersQuery = query(
+      collection(db, "users"),
+      where("email", ">=", email),
+      where("email", "<=", email + "\uf8ff"),
+    )
+    const usersSnapshot = await getDocs(usersQuery)
+
+    const users: User[] = []
+
+    usersSnapshot.forEach((doc) => {
+      const data = doc.data()
+      users.push({
+        id: doc.id,
+        displayName: data.displayName || data.email,
+        email: data.email,
+        photoURL: data.photoURL,
+      })
+    })
+
+    return users
+  } catch (error) {
+    console.error("Error searching users:", error)
+    throw error
+  }
+}
+
+// Додавання учасника до проекту
+export async function addProjectMember(
+  projectId: string,
+  userData: { userId: string; userName: string; userEmail: string; role: "admin" | "member" },
+): Promise<ProjectMember> {
+  try {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error("User not authenticated")
+    }
+
+    // Перевіряємо, чи користувач вже є учасником проекту
+    const existingMemberQuery = query(
+      collection(db, "projectMembers"),
+      where("projectId", "==", projectId),
+      where("userId", "==", userData.userId),
+    )
+
+    const existingMemberSnapshot = await getDocs(existingMemberQuery)
+
+    if (!existingMemberSnapshot.empty) {
+      throw new Error("Користувач вже є учасником проекту")
+    }
+
+    // Перевіряємо, чи має поточний користувач права для додавання учасників
+    const currentUserMemberQuery = query(
+      collection(db, "projectMembers"),
+      where("projectId", "==", projectId),
+      where("userId", "==", user.uid),
+    )
+
+    const currentUserMemberSnapshot = await getDocs(currentUserMemberQuery)
+
+    if (currentUserMemberSnapshot.empty) {
+      throw new Error("У вас немає прав для додавання учасників до цього проекту")
+    }
+
+    const currentUserRole = currentUserMemberSnapshot.docs[0].data().role
+
+    if (currentUserRole !== "owner" && currentUserRole !== "admin") {
+      throw new Error("У вас немає прав для додавання учасників до цього проекту")
+    }
+
+    // Додаємо нового учасника
+    const memberData = {
+      projectId,
+      userId: userData.userId,
+      userName: userData.userName,
+      userEmail: userData.userEmail,
+      role: userData.role,
+      addedAt: serverTimestamp(),
+    }
+
+    const memberRef = await addDoc(collection(db, "projectMembers"), memberData)
+
+    // Додаємо запис про активність
+    await addDoc(collection(db, "activities"), {
+      type: "user",
+      action: "create",
+      projectId,
+      userId: user.uid,
+      userName: user.displayName || user.email,
+      targetUserId: userData.userId,
+      targetUserName: userData.userName,
+      timestamp: serverTimestamp(),
+    })
+
+    // Отримуємо дані про проект для повідомлення
+    const projectDoc = await getDoc(doc(db, "projects", projectId))
+    const projectName = projectDoc.exists() ? projectDoc.data().name : "Проект"
+
+    return {
+      id: memberRef.id,
+      ...memberData,
+      addedAt: { seconds: Date.now() / 1000, nanoseconds: 0 } as Timestamp,
+    } as ProjectMember
+  } catch (error) {
+    console.error("Error adding project member:", error)
+    throw error
+  }
+}
+
+// Видалення учасника з проекту
+export async function removeProjectMember(memberId: string): Promise<void> {
+  try {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error("User not authenticated")
+    }
+
+    // Отримуємо дані про учасника
+    const memberDoc = await getDoc(doc(db, "projectMembers", memberId))
+
+    if (!memberDoc.exists()) {
+      throw new Error("Учасника не знайдено")
+    }
+
+    const memberData = memberDoc.data()
+    const projectId = memberData.projectId
+
+    // Перевіряємо, чи має поточний користувач права для видалення учасників
+    const currentUserMemberQuery = query(
+      collection(db, "projectMembers"),
+      where("projectId", "==", projectId),
+      where("userId", "==", user.uid),
+    )
+
+    const currentUserMemberSnapshot = await getDocs(currentUserMemberQuery)
+
+    if (currentUserMemberSnapshot.empty) {
+      throw new Error("У вас немає прав для видалення учасників з цього проекту")
+    }
+
+    const currentUserRole = currentUserMemberSnapshot.docs[0].data().role
+
+    // Власник може видаляти будь-кого, адміністратор може видаляти тільки звичайних учасників
+    if (currentUserRole !== "owner" && (currentUserRole !== "admin" || memberData.role !== "member")) {
+      throw new Error("У вас немає прав для видалення цього учасника")
+    }
+
+    // Не дозволяємо видаляти власника проекту
+    if (memberData.role === "owner") {
+      throw new Error("Неможливо видалити власника проекту")
+    }
+
+    // Видаляємо учасника
+    await deleteDoc(doc(db, "projectMembers", memberId))
+
+    // Додаємо запис про активність
+    await addDoc(collection(db, "activities"), {
+      type: "user",
+      action: "delete",
+      projectId,
+      userId: user.uid,
+      userName: user.displayName || user.email,
+      targetUserId: memberData.userId,
+      targetUserName: memberData.userName,
+      timestamp: serverTimestamp(),
+    })
+  } catch (error) {
+    console.error("Error removing project member:", error)
+    throw error
+  }
+}
+
+// Оновлення ролі учасника проекту
+export async function updateProjectMemberRole(memberId: string, newRole: "admin" | "member"): Promise<void> {
+  try {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error("User not authenticated")
+    }
+
+    // Отримуємо дані про учасника
+    const memberDoc = await getDoc(doc(db, "projectMembers", memberId))
+
+    if (!memberDoc.exists()) {
+      throw new Error("Учасника не знайдено")
+    }
+
+    const memberData = memberDoc.data()
+    const projectId = memberData.projectId
+
+    // Перевіряємо, чи має поточний користувач права для зміни ролей
+    const currentUserMemberQuery = query(
+      collection(db, "projectMembers"),
+      where("projectId", "==", projectId),
+      where("userId", "==", user.uid),
+    )
+
+    const currentUserMemberSnapshot = await getDocs(currentUserMemberQuery)
+
+    if (currentUserMemberSnapshot.empty) {
+      throw new Error("У вас немає прав для зміни ролей учасників цього проекту")
+    }
+
+    const currentUserRole = currentUserMemberSnapshot.docs[0].data().role
+
+    // Тільки власник може змінювати ролі
+    if (currentUserRole !== "owner") {
+      throw new Error("Тільки власник проекту може змінювати ролі учасників")
+    }
+
+    // Не дозволяємо змінювати роль власника
+    if (memberData.role === "owner") {
+      throw new Error("Неможливо змінити роль власника проекту")
+    }
+
+    // Оновлюємо роль
+    await updateDoc(doc(db, "projectMembers", memberId), {
+      role: newRole,
+    })
+
+    // Додаємо запис про активність
+    await addDoc(collection(db, "activities"), {
+      type: "user",
+      action: "update",
+      projectId,
+      userId: user.uid,
+      userName: user.displayName || user.email,
+      targetUserId: memberData.userId,
+      targetUserName: memberData.userName,
+      details: `Роль змінено на ${newRole === "admin" ? "Адміністратор" : "Учасник"}`,
+      timestamp: serverTimestamp(),
+    })
+  } catch (error) {
+    console.error("Error updating project member role:", error)
     throw error
   }
 }

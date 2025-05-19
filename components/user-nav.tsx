@@ -60,11 +60,6 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push("/profile")}>Профіль</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/settings")}>Налаштування</DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>Вийти</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
