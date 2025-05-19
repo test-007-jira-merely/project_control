@@ -42,8 +42,8 @@ export function LoginForm() {
         title: "Успішний вхід",
         description: "Ви успішно увійшли в систему",
       })
+      await new Promise((resolve) => setTimeout(resolve, 1000)) // Затримка для демонстрації
       router.push("/dashboard")
-      router.refresh()
     } catch (error) {
       toast({
         variant: "destructive",
