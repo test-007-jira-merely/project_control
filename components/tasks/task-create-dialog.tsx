@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/components/ui/use-toast"
 import { createTask } from "@/lib/firebase/database"
 import { getProjectMembers } from "@/lib/firebase/database"
+import { TASK_STATUS_OPTIONS } from "@/lib/task-status"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/lib/firebase/database"
 
@@ -164,10 +165,11 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="todo">Очікує</SelectItem>
-                        <SelectItem value="in-progress">В процесі</SelectItem>
-                        <SelectItem value="review">На перевірці</SelectItem>
-                        <SelectItem value="completed">Завершено</SelectItem>
+                        {TASK_STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
