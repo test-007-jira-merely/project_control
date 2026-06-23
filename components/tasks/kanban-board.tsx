@@ -6,7 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
+import { TASK_STATUS_META, TASK_STATUS_ORDER } from "@/lib/task-statuses"
 import type { Task } from "@/lib/firebase/database"
+
+type KanbanColumns = Record<Task["status"], { name: string; items: Task[] }>
+
+function buildColumns(tasks: Task[]): KanbanColumns {
+  return Object.fromEntries(
+    TASK_STATUS_ORDER.map((status) => [
+      status,
+      {
+        name: TASK_STATUS_META[status].label,
+        items: tasks.filter((task) => task.status === status),
+      },
+    ]),
+  ) as KanbanColumns
+}
 
 interface KanbanBoardProps {
   tasks: Task[]
@@ -17,45 +32,11 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: KanbanBoardProps) {
   const { toast } = useToast()
-  const [columns, setColumns] = useState({
-    todo: {
-      name: "Очікує",
-      items: tasks.filter((task) => task.status === "todo"),
-    },
-    "in-progress": {
-      name: "В процесі",
-      items: tasks.filter((task) => task.status === "in-progress"),
-    },
-    review: {
-      name: "На перевірці",
-      items: tasks.filter((task) => task.status === "review"),
-    },
-    completed: {
-      name: "Завершено",
-      items: tasks.filter((task) => task.status === "completed"),
-    },
-  })
+  const [columns, setColumns] = useState(buildColumns(tasks))
 
   // Оновлюємо колонки при зміні задач
   useState(() => {
-    setColumns({
-      todo: {
-        name: "Очікує",
-        items: tasks.filter((task) => task.status === "todo"),
-      },
-      "in-progress": {
-        name: "В процесі",
-        items: tasks.filter((task) => task.status === "in-progress"),
-      },
-      review: {
-        name: "На перевірці",
-        items: tasks.filter((task) => task.status === "review"),
-      },
-      completed: {
-        name: "Завершено",
-        items: tasks.filter((task) => task.status === "completed"),
-      },
-    })
+    setColumns(buildColumns(tasks))
   })
 
   const priorityMap = {

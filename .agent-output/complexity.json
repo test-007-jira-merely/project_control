@@ -1,0 +1,68 @@
+{
+  "footprint": {
+    "f_mod": 6,
+    "f_new": 1
+  },
+  "blast_radius": {
+    "services_touched": 0,
+    "file_details": [
+      {
+        "file": "lib/task-statuses.ts",
+        "action": "created",
+        "fanin": 6,
+        "fanout": 1,
+        "rationale": "New shared helper planned for six UI consumers with only a Task type import."
+      },
+      {
+        "file": "components/tasks/task-card.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 4,
+        "rationale": "Modified UI component replacing local status map with shared helper import."
+      },
+      {
+        "file": "components/tasks/kanban-board.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 5,
+        "rationale": "Modified UI component adding shared status imports and a local column builder."
+      },
+      {
+        "file": "components/tasks/task-create-dialog.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 5,
+        "rationale": "Modified form dialog replacing hardcoded status options with shared options."
+      },
+      {
+        "file": "components/tasks/task-edit-dialog.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 5,
+        "rationale": "Modified form dialog replacing hardcoded status options with shared options."
+      },
+      {
+        "file": "components/dashboard/tasks-review.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 5,
+        "rationale": "Modified dashboard UI component using shared review badge label and color."
+      },
+      {
+        "file": "components/dashboard/project-chart.tsx",
+        "action": "modified",
+        "fanin": 5,
+        "fanout": 5,
+        "rationale": "Modified dashboard chart using shared chart labels for task status data."
+      }
+    ]
+  },
+  "risk": {
+    "data_migration": false,
+    "public_api_change": false,
+    "security": false,
+    "infra_ci": false,
+    "external_api": false,
+    "perf_slo": false
+  }
+}

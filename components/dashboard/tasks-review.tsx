@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import { getTasksInReview, updateTaskStatus } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
+import { getTaskStatusMeta } from "@/lib/task-statuses"
 import type { Task } from "@/lib/firebase/database"
 
 export function TasksInReview() {
@@ -17,6 +18,7 @@ export function TasksInReview() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const { toast } = useToast()
+  const reviewStatus = getTaskStatusMeta("review")
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -81,11 +83,8 @@ export function TasksInReview() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium">{task.title}</h3>
-                      <Badge
-                        variant="outline"
-                        className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                      >
-                        На перевірці
+                      <Badge variant="outline" className={reviewStatus.color}>
+                        {reviewStatus.label}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{task.description}</p>
