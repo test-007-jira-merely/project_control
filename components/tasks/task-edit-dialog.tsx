@@ -51,8 +51,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [members, setMembers] = useState<any[]>([])
-  
-  // Use "unassigned" as the value for no assignee instead of empty string
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,7 +59,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo ?? undefined,
       dueDate: task.dueDate || undefined,
     },
   })
@@ -87,7 +86,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo ?? undefined,
       dueDate: task.dueDate || undefined,
     })
   }, [form, task])
@@ -101,7 +100,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
         description: values.description,
         status: values.status,
         priority: values.priority,
-        assignedTo: values.assignedTo === "unassigned" ? null : values.assignedTo, // Handle the unassigned case
+        assignedTo: values.assignedTo ?? null,
         dueDate: values.dueDate || null,
       })
 
@@ -229,6 +228,50 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                       <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="assignedTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Виконавець</FormLabel>
+                  <div className="space-y-2">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Не призначено" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {field.value && !members.some((member) => member.userId === field.value) && (
+                          <SelectItem value={field.value}>{field.value}</SelectItem>
+                        )}
+                        {members.length > 0 ? (
+                          members.map((member) => (
+                            <SelectItem key={member.userId} value={member.userId}>
+                              {member.userName || member.userEmail || member.userId}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                            Немає доступних учасників
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => field.onChange(undefined)}
+                      disabled={!field.value}
+                    >
+                      Зняти призначення
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
