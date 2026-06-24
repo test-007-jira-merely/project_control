@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import { getTasksInReview, updateTaskStatus } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
+import { TASK_STATUS } from "@/lib/constants"
 import type { Task } from "@/lib/firebase/database"
 
 export function TasksInReview() {
@@ -83,9 +84,9 @@ export function TasksInReview() {
                       <h3 className="font-medium">{task.title}</h3>
                       <Badge
                         variant="outline"
-                        className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                        className={TASK_STATUS.review.color}
                       >
-                        На перевірці
+                        {TASK_STATUS.review.label}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{task.description}</p>
