@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { onAuthStateChanged } from "firebase/auth"
-import { auth } from "@/lib/firebase/config"
+import { auth, isFirebaseConfigured } from "@/lib/firebase/config"
 import { getUserRole } from "@/lib/firebase/users"
 
 export type UserRole = "guest" | "user" | "admin"
@@ -33,6 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
