@@ -27,6 +27,14 @@ import { updateTask, getProjectMembers } from "@/lib/firebase/database"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/lib/firebase/database"
 
+type AssigneeOption = {
+  userId: string
+  userName?: string
+  userEmail?: string
+}
+
+const UNASSIGNED_VALUE = "__unassigned__" as const
+
 const formSchema = z.object({
   title: z.string().min(2, {
     message: "Назва задачі має містити щонайменше 2 символи",
@@ -50,9 +58,8 @@ interface TaskEditDialogProps {
 export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: TaskEditDialogProps) {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  const [members, setMembers] = useState<any[]>([])
+  const [members, setMembers] = useState<AssigneeOption[]>([])
   
-  // Use "unassigned" as the value for no assignee instead of empty string
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,7 +67,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo ?? undefined,
       dueDate: task.dueDate || undefined,
     },
   })
@@ -87,7 +94,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo ?? undefined,
       dueDate: task.dueDate || undefined,
     })
   }, [form, task])
@@ -101,7 +108,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
         description: values.description,
         status: values.status,
         priority: values.priority,
-        assignedTo: values.assignedTo === "unassigned" ? null : values.assignedTo, // Handle the unassigned case
+        assignedTo: values.assignedTo || null,
         dueDate: values.dueDate || null,
       })
 
@@ -166,7 +173,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Статус</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Виберіть статус" />
@@ -189,7 +196,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Пріоритет</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Виберіть пріоритет" />
@@ -207,6 +214,34 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="assignedTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Виконавець</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(value === UNASSIGNED_VALUE ? undefined : value)}
+                    value={field.value ?? UNASSIGNED_VALUE}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Виберіть виконавця" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED_VALUE}>Не призначено</SelectItem>
+                      {members.map((member) => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.userName || member.userEmail || member.userId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="dueDate"
