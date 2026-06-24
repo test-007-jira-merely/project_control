@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,48 +15,38 @@ interface KanbanBoardProps {
   loading: boolean
 }
 
-export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: KanbanBoardProps) {
-  const { toast } = useToast()
-  const [columns, setColumns] = useState({
-    todo: {
-      name: "Очікує",
-      items: tasks.filter((task) => task.status === "todo"),
-    },
-    "in-progress": {
-      name: "В процесі",
-      items: tasks.filter((task) => task.status === "in-progress"),
-    },
-    review: {
-      name: "На перевірці",
-      items: tasks.filter((task) => task.status === "review"),
-    },
-    completed: {
-      name: "Завершено",
-      items: tasks.filter((task) => task.status === "completed"),
-    },
+const COLUMN_NAMES = {
+  todo: "Очікує",
+  "in-progress": "В процесі",
+  review: "На перевірці",
+  completed: "Завершено",
+}
+
+const createColumns = (tasks: Task[]) => {
+  const columns = {
+    todo: { name: COLUMN_NAMES.todo, items: [] as Task[] },
+    "in-progress": { name: COLUMN_NAMES["in-progress"], items: [] as Task[] },
+    review: { name: COLUMN_NAMES.review, items: [] as Task[] },
+    completed: { name: COLUMN_NAMES.completed, items: [] as Task[] },
+  }
+
+  tasks.forEach((task) => {
+    if (columns[task.status]) {
+      columns[task.status].items.push(task)
+    }
   })
 
+  return columns
+}
+
+export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: KanbanBoardProps) {
+  const { toast } = useToast()
+  const [columns, setColumns] = useState(() => createColumns(tasks))
+
   // Оновлюємо колонки при зміні задач
-  useState(() => {
-    setColumns({
-      todo: {
-        name: "Очікує",
-        items: tasks.filter((task) => task.status === "todo"),
-      },
-      "in-progress": {
-        name: "В процесі",
-        items: tasks.filter((task) => task.status === "in-progress"),
-      },
-      review: {
-        name: "На перевірці",
-        items: tasks.filter((task) => task.status === "review"),
-      },
-      completed: {
-        name: "Завершено",
-        items: tasks.filter((task) => task.status === "completed"),
-      },
-    })
-  })
+  useEffect(() => {
+    setColumns(createColumns(tasks))
+  }, [tasks])
 
   const priorityMap = {
     low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
