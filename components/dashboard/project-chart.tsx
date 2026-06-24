@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 import { getProjectStats, getTaskStats } from "@/lib/firebase/stats"
+import { TASK_STATUS_MAP } from "@/lib/constants"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"]
 
@@ -46,10 +47,10 @@ export function ProjectChart() {
 
   // Фільтруємо нульові значення для задач
   const taskData = [
-    { name: "Очікують", value: taskStats.todo },
-    { name: "В процесі", value: taskStats.inProgress },
-    { name: "На перевірці", value: taskStats.review },
-    { name: "Завершені", value: taskStats.completed },
+    { name: TASK_STATUS_MAP.todo.label, value: taskStats.todo },
+    { name: TASK_STATUS_MAP["in-progress"].label, value: taskStats.inProgress },
+    { name: TASK_STATUS_MAP.review.label, value: taskStats.review },
+    { name: TASK_STATUS_MAP.completed.label, value: taskStats.completed },
   ].filter((item) => item.value > 0)
 
   // Фільтруємо нульові значення для стовпчикової діаграми

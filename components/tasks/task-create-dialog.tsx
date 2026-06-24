@@ -27,6 +27,7 @@ import { createTask } from "@/lib/firebase/database"
 import { getProjectMembers } from "@/lib/firebase/database"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/lib/firebase/database"
+import { TASK_STATUS_MAP, TASK_PRIORITY_MAP } from "@/lib/constants"
 
 const formSchema = z.object({
   title: z.string().min(2, {
@@ -164,10 +165,9 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="todo">Очікує</SelectItem>
-                        <SelectItem value="in-progress">В процесі</SelectItem>
-                        <SelectItem value="review">На перевірці</SelectItem>
-                        <SelectItem value="completed">Завершено</SelectItem>
+                        {Object.entries(TASK_STATUS_MAP).map(([value, { label }]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -187,10 +187,9 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="low">Низький</SelectItem>
-                        <SelectItem value="medium">Середній</SelectItem>
-                        <SelectItem value="high">Високий</SelectItem>
-                        <SelectItem value="urgent">Терміновий</SelectItem>
+                        {Object.entries(TASK_PRIORITY_MAP).map(([value, { label }]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
