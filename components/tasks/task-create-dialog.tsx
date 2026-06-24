@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { createTask } from "@/lib/firebase/database"
 import { getProjectMembers } from "@/lib/firebase/database"
 import { cn } from "@/lib/utils"
+import { TASK_STATUS_LIST, TASK_PRIORITY_LIST } from "@/lib/constants"
 import type { Task } from "@/lib/firebase/database"
 
 const formSchema = z.object({
@@ -164,10 +165,11 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="todo">Очікує</SelectItem>
-                        <SelectItem value="in-progress">В процесі</SelectItem>
-                        <SelectItem value="review">На перевірці</SelectItem>
-                        <SelectItem value="completed">Завершено</SelectItem>
+                        {TASK_STATUS_LIST.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -187,10 +189,11 @@ export function TaskCreateDialog({ open, onOpenChange, projectId, onTaskCreated 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="low">Низький</SelectItem>
-                        <SelectItem value="medium">Середній</SelectItem>
-                        <SelectItem value="high">Високий</SelectItem>
-                        <SelectItem value="urgent">Терміновий</SelectItem>
+                        {TASK_PRIORITY_LIST.map((priority) => (
+                          <SelectItem key={priority.value} value={priority.value}>
+                            {priority.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
+import { TASK_STATUS, TASK_PRIORITY } from "@/lib/constants"
 import type { Task } from "@/lib/firebase/database"
 
 interface KanbanBoardProps {
@@ -19,19 +20,19 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   const { toast } = useToast()
   const [columns, setColumns] = useState({
     todo: {
-      name: "Очікує",
+      name: TASK_STATUS.todo.label,
       items: tasks.filter((task) => task.status === "todo"),
     },
     "in-progress": {
-      name: "В процесі",
+      name: TASK_STATUS["in-progress"].label,
       items: tasks.filter((task) => task.status === "in-progress"),
     },
     review: {
-      name: "На перевірці",
+      name: TASK_STATUS.review.label,
       items: tasks.filter((task) => task.status === "review"),
     },
     completed: {
-      name: "Завершено",
+      name: TASK_STATUS.completed.label,
       items: tasks.filter((task) => task.status === "completed"),
     },
   })
@@ -40,30 +41,23 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   useState(() => {
     setColumns({
       todo: {
-        name: "Очікує",
+        name: TASK_STATUS.todo.label,
         items: tasks.filter((task) => task.status === "todo"),
       },
       "in-progress": {
-        name: "В процесі",
+        name: TASK_STATUS["in-progress"].label,
         items: tasks.filter((task) => task.status === "in-progress"),
       },
       review: {
-        name: "На перевірці",
+        name: TASK_STATUS.review.label,
         items: tasks.filter((task) => task.status === "review"),
       },
       completed: {
-        name: "Завершено",
+        name: TASK_STATUS.completed.label,
         items: tasks.filter((task) => task.status === "completed"),
       },
     })
   })
-
-  const priorityMap = {
-    low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-    medium: { label: "Середній", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-    high: { label: "Високий", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-    urgent: { label: "Терміновий", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-  }
 
   const onDragEnd = async (result: any) => {
     if (!result.destination) return
@@ -162,8 +156,8 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
                               <CardContent className="p-3 pt-1">
                                 <p className="line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
                                 <div className="mt-2">
-                                  <Badge className={priorityMap[task.priority].color}>
-                                    {priorityMap[task.priority].label}
+                                  <Badge className={TASK_PRIORITY[task.priority].color}>
+                                    {TASK_PRIORITY[task.priority].label}
                                   </Badge>
                                 </div>
                               </CardContent>
