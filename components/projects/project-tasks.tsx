@@ -1,25 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getProjectTasks } from "@/lib/firebase/database"
+import { getProjectTasks, getProjectMembers } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
-import type { Task } from "@/lib/firebase/database"
+import { TaskFilterToolbar, type TaskFilters } from "@/components/tasks/task-filter-toolbar"
+import type { Task, ProjectMember } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
   projectId: string
   canEdit: boolean
 }
 
+const INITIAL_FILTERS: TaskFilters = {
+  search: "",
+  status: "all",
+  priority: "all",
+  assignee: "all",
+}
+
 export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [filters, setFilters] = useState<TaskFilters>(INITIAL_FILTERS)
 
   const fetchTasks = async () => {
     try {
@@ -32,22 +42,55 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
     }
   }
 
-  useEffect(() => {
+  const fetchMembers = async () => {
+    try {
+      const projectMembers = await getProjectMembers(projectId)
+      setMembers(projectMembers)
+    } catch (error) {
+      console.error("Error fetching members:", error)
+    }
+  }
 
-    fetchTasks()
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([fetchTasks(), fetchMembers()])
   }, [projectId])
 
-  const handleTaskCreated = (newTask: Task) => {
-    fetchTasks();
-  }
+  const refreshTasks = () => fetchTasks()
 
-  const handleTaskUpdated = (updatedTask: Task) => {
-    fetchTasks();
-  }
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      // Пошук за текстом (назва або опис)
+      const matchesSearch =
+        filters.search === "" ||
+        task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        task.description.toLowerCase().includes(filters.search.toLowerCase())
 
-  const handleTaskDeleted = (taskId: string) => {
-    fetchTasks();
-  }
+      // Фільтр за статусом
+      const matchesStatus = filters.status === "all" || task.status === filters.status
+
+      // Фільтр за пріоритетом
+      const matchesPriority = filters.priority === "all" || task.priority === filters.priority
+
+      // Фільтр за виконавцем
+      const matchesAssignee =
+        filters.assignee === "all" ||
+        (filters.assignee === "unassigned" ? !task.assignedTo : task.assignedTo === filters.assignee)
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesAssignee
+    })
+  }, [tasks, filters])
+
+  const EmptySearchState = () => (
+    <Card className="flex flex-col items-center justify-center py-12 text-center">
+      <Search className="mb-4 h-12 w-12 text-muted-foreground" />
+      <CardTitle>Нічого не знайдено</CardTitle>
+      <CardDescription>Спробуйте змінити фільтри пошуку.</CardDescription>
+      <Button variant="link" onClick={() => setFilters(INITIAL_FILTERS)}>
+        Очистити всі фільтри
+      </Button>
+    </Card>
+  )
 
   return (
     <div className="space-y-4">
@@ -60,6 +103,8 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           </Button>
         )}
       </div>
+
+      <TaskFilterToolbar filters={filters} setFilters={setFilters} members={members} />
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
@@ -75,13 +120,15 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
-            onTaskUpdated={handleTaskUpdated}
-            onTaskDeleted={handleTaskDeleted}
-            loading={loading}
-          />
+              tasks={filteredTasks}
+              onTaskUpdated={refreshTasks}
+              onTaskDeleted={refreshTasks}
+              loading={loading}
+            />
+          ) : tasks.length > 0 ? (
+            <EmptySearchState />
           ) : (
             <Card>
               <CardHeader>
@@ -108,17 +155,19 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
-                  onTaskUpdated={handleTaskUpdated}
-                  onTaskDeleted={handleTaskDeleted}
+                  onTaskUpdated={refreshTasks}
+                  onTaskDeleted={refreshTasks}
                 />
               ))}
             </div>
+          ) : tasks.length > 0 ? (
+            <EmptySearchState />
           ) : (
             <Card>
               <CardHeader>
@@ -143,7 +192,7 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           projectId={projectId}
-          onTaskCreated={handleTaskCreated}
+          onTaskCreated={refreshTasks}
         />
       )}
     </div>
