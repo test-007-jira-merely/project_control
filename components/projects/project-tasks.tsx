@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
 import type { Task } from "@/lib/firebase/database"
+import { TaskFilterToolbar, type TaskFilters } from "@/components/tasks/task-filter-toolbar"
 
 interface ProjectTasksProps {
   projectId: string
@@ -20,6 +21,11 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [filters, setFilters] = useState<TaskFilters>({
+    search: "",
+    status: "all",
+    priority: "all",
+  })
 
   const fetchTasks = async () => {
     try {
@@ -49,6 +55,20 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
     fetchTasks();
   }
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const searchLower = filters.search.toLowerCase()
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchLower) ||
+        task.description.toLowerCase().includes(searchLower)
+
+      const matchesStatus = filters.status === "all" || task.status === filters.status
+      const matchesPriority = filters.priority === "all" || task.priority === filters.priority
+
+      return matchesSearch && matchesStatus && matchesPriority
+    })
+  }, [tasks, filters])
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between">
@@ -60,6 +80,14 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           </Button>
         )}
       </div>
+
+      {(tasks.length > 0 || filters.search || filters.status !== "all" || filters.priority !== "all") && (
+        <TaskFilterToolbar
+          filters={filters}
+          onFilterChange={setFilters}
+          onClear={() => setFilters({ search: "", status: "all", priority: "all" })}
+        />
+      )}
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
@@ -75,13 +103,20 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskUpdated={handleTaskUpdated}
             onTaskDeleted={handleTaskDeleted}
             loading={loading}
           />
+          ) : tasks.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Нічого не знайдено</CardTitle>
+                <CardDescription>За вашими критеріями пошуку не знайдено жодної задачі.</CardDescription>
+              </CardHeader>
+            </Card>
           ) : (
             <Card>
               <CardHeader>
@@ -108,9 +143,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -119,6 +154,13 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 />
               ))}
             </div>
+          ) : tasks.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Нічого не знайдено</CardTitle>
+                <CardDescription>За вашими критеріями пошуку не знайдено жодної задачі.</CardDescription>
+              </CardHeader>
+            </Card>
           ) : (
             <Card>
               <CardHeader>
