@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
 import type { Task } from "@/lib/firebase/database"
+import { TASK_STATUS_MAP, TASK_PRIORITY_MAP } from "@/lib/constants"
 
 interface KanbanBoardProps {
   tasks: Task[]
@@ -15,55 +16,33 @@ interface KanbanBoardProps {
   loading: boolean
 }
 
+const buildColumns = (taskList: Task[]) => ({
+  todo: {
+    name: TASK_STATUS_MAP.todo.label,
+    items: taskList.filter((task) => task.status === "todo"),
+  },
+  "in-progress": {
+    name: TASK_STATUS_MAP["in-progress"].label,
+    items: taskList.filter((task) => task.status === "in-progress"),
+  },
+  review: {
+    name: TASK_STATUS_MAP.review.label,
+    items: taskList.filter((task) => task.status === "review"),
+  },
+  completed: {
+    name: TASK_STATUS_MAP.completed.label,
+    items: taskList.filter((task) => task.status === "completed"),
+  },
+})
+
 export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: KanbanBoardProps) {
   const { toast } = useToast()
-  const [columns, setColumns] = useState({
-    todo: {
-      name: "Очікує",
-      items: tasks.filter((task) => task.status === "todo"),
-    },
-    "in-progress": {
-      name: "В процесі",
-      items: tasks.filter((task) => task.status === "in-progress"),
-    },
-    review: {
-      name: "На перевірці",
-      items: tasks.filter((task) => task.status === "review"),
-    },
-    completed: {
-      name: "Завершено",
-      items: tasks.filter((task) => task.status === "completed"),
-    },
-  })
+  const [columns, setColumns] = useState(() => buildColumns(tasks))
 
   // Оновлюємо колонки при зміні задач
-  useState(() => {
-    setColumns({
-      todo: {
-        name: "Очікує",
-        items: tasks.filter((task) => task.status === "todo"),
-      },
-      "in-progress": {
-        name: "В процесі",
-        items: tasks.filter((task) => task.status === "in-progress"),
-      },
-      review: {
-        name: "На перевірці",
-        items: tasks.filter((task) => task.status === "review"),
-      },
-      completed: {
-        name: "Завершено",
-        items: tasks.filter((task) => task.status === "completed"),
-      },
-    })
-  })
-
-  const priorityMap = {
-    low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-    medium: { label: "Середній", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-    high: { label: "Високий", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-    urgent: { label: "Терміновий", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-  }
+  useEffect(() => {
+    setColumns(buildColumns(tasks))
+  }, [tasks])
 
   const onDragEnd = async (result: any) => {
     if (!result.destination) return
@@ -162,8 +141,8 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
                               <CardContent className="p-3 pt-1">
                                 <p className="line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
                                 <div className="mt-2">
-                                  <Badge className={priorityMap[task.priority].color}>
-                                    {priorityMap[task.priority].label}
+                                  <Badge className={TASK_PRIORITY_MAP[task.priority].color}>
+                                    {TASK_PRIORITY_MAP[task.priority].label}
                                   </Badge>
                                 </div>
                               </CardContent>
