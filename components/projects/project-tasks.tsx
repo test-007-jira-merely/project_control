@@ -9,6 +9,7 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { TaskFilterToolbar, type TaskFilters } from "@/components/tasks/task-filter-toolbar"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +21,27 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [filters, setFilters] = useState<TaskFilters>({
+    search: "",
+    status: "all",
+    priority: "all",
+  })
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase()
+      const titleMatch = task.title.toLowerCase().includes(searchLower)
+      const descMatch = task.description?.toLowerCase().includes(searchLower)
+      if (!titleMatch && !descMatch) return false
+    }
+    if (filters.status !== "all" && task.status !== filters.status) {
+      return false
+    }
+    if (filters.priority !== "all" && task.priority !== filters.priority) {
+      return false
+    }
+    return true
+  })
 
   const fetchTasks = async () => {
     try {
@@ -61,6 +83,14 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
         )}
       </div>
 
+      {!loading && tasks.length > 0 && (
+        <TaskFilterToolbar
+          filters={filters}
+          onFilterChange={setFilters}
+          onClear={() => setFilters({ search: "", status: "all", priority: "all" })}
+        />
+      )}
+
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
@@ -76,12 +106,21 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
               ))}
             </div>
           ) : tasks.length > 0 ? (
-            <KanbanBoard
-            tasks={tasks}
-            onTaskUpdated={handleTaskUpdated}
-            onTaskDeleted={handleTaskDeleted}
-            loading={loading}
-          />
+            filteredTasks.length > 0 ? (
+              <KanbanBoard
+                tasks={filteredTasks}
+                onTaskUpdated={handleTaskUpdated}
+                onTaskDeleted={handleTaskDeleted}
+                loading={loading}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Немає задач за цими фільтрами</CardTitle>
+                  <CardDescription>Змініть або очистіть фільтри, щоб побачити задачі.</CardDescription>
+                </CardHeader>
+              </Card>
+            )
           ) : (
             <Card>
               <CardHeader>
@@ -109,16 +148,25 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
               ))}
             </div>
           ) : tasks.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onTaskUpdated={handleTaskUpdated}
-                  onTaskDeleted={handleTaskDeleted}
-                />
-              ))}
-            </div>
+            filteredTasks.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onTaskUpdated={handleTaskUpdated}
+                    onTaskDeleted={handleTaskDeleted}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Немає задач за цими фільтрами</CardTitle>
+                  <CardDescription>Змініть або очистіть фільтри, щоб побачити задачі.</CardDescription>
+                </CardHeader>
+              </Card>
+            )
           ) : (
             <Card>
               <CardHeader>
