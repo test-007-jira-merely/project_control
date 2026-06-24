@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { TaskFilters, type TaskFilterState } from "@/components/tasks/task-filters"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +21,28 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const defaultFilters: TaskFilterState = useMemo(() => ({
+    search: "",
+    status: "all",
+    priority: "all",
+    assigneeId: "all"
+  }), [])
+  const [filters, setFilters] = useState<TaskFilterState>(defaultFilters)
+
+  const filteredTasks = useMemo(() => {
+    const query = filters.search.toLowerCase()
+    return tasks.filter((task) => {
+      if (filters.status !== "all" && task.status !== filters.status) return false
+      if (filters.priority !== "all" && task.priority !== filters.priority) return false
+      if (filters.assigneeId !== "all" && task.assignedTo !== filters.assigneeId) return false
+
+      if (query) {
+        const inTitle = task.title.toLowerCase().includes(query)
+        if (!inTitle && !task.description?.toLowerCase().includes(query)) return false
+      }
+      return true
+    })
+  }, [tasks, filters])
 
   const fetchTasks = async () => {
     try {
@@ -61,6 +84,12 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
         )}
       </div>
 
+      <TaskFilters
+        filters={filters}
+        onChange={setFilters}
+        onClear={() => setFilters(defaultFilters)}
+      />
+
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
@@ -75,9 +104,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskUpdated={handleTaskUpdated}
             onTaskDeleted={handleTaskDeleted}
             loading={loading}
@@ -85,14 +114,23 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardTitle>{tasks.length > 0 ? "Не знайдено задач" : "Немає задач"}</CardTitle>
+                <CardDescription>
+                  {tasks.length > 0
+                    ? "Немає задач, що відповідають поточним фільтрам."
+                    : "У цьому проекті ще немає задач."}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {canEdit && tasks.length === 0 && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
+                  </Button>
+                )}
+                {tasks.length > 0 && (
+                  <Button variant="outline" onClick={() => setFilters(defaultFilters)}>
+                    Очистити фільтри
                   </Button>
                 )}
               </CardContent>
@@ -108,9 +146,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -122,14 +160,23 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardTitle>{tasks.length > 0 ? "Не знайдено задач" : "Немає задач"}</CardTitle>
+                <CardDescription>
+                  {tasks.length > 0
+                    ? "Немає задач, що відповідають поточним фільтрам."
+                    : "У цьому проекті ще немає задач."}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {canEdit && tasks.length === 0 && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
+                  </Button>
+                )}
+                {tasks.length > 0 && (
+                  <Button variant="outline" onClick={() => setFilters(defaultFilters)}>
+                    Очистити фільтри
                   </Button>
                 )}
               </CardContent>
