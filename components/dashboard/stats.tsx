@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getProjectStats, getTaskStats } from "@/lib/firebase/stats"
 import { BarChart, CheckCircle, ListChecks, FolderKanban } from "lucide-react"
+import { TASK_STATUSES } from "@/lib/constants"
 
 export function DashboardStats() {
   const [projectStats, setProjectStats] = useState({
@@ -65,7 +66,7 @@ export function DashboardStats() {
         <CardContent>
           <div className="text-2xl font-bold">{taskStats.total}</div>
           <p className="text-xs text-muted-foreground">
-            {taskStats.todo} очікують, {taskStats.inProgress} в процесі
+            {taskStats.todo} {TASK_STATUSES.todo.pluralLabel.toLowerCase()}, {taskStats.inProgress} {TASK_STATUSES["in-progress"].pluralLabel.toLowerCase()}
           </p>
         </CardContent>
       </Card>

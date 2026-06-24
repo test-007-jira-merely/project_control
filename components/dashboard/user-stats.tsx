@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { getUserStats } from "@/lib/firebase/stats"
 import { cn } from "@/lib/utils"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { TASK_STATUSES } from "@/lib/constants"
 
 interface UserStatsProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -38,8 +39,8 @@ export function UserStats({ className, ...props }: UserStatsProps) {
   const COLORS = ["#00C49F", "#FFBB28"]
 
   const completionData = [
-    { name: "Завершено", value: stats.tasksCompleted },
-    { name: "В процесі", value: stats.tasksAssigned - stats.tasksCompleted },
+    { name: TASK_STATUSES.completed.label, value: stats.tasksCompleted },
+    { name: TASK_STATUSES["in-progress"].label, value: stats.tasksAssigned - stats.tasksCompleted },
   ]
 
   return (

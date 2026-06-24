@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
 import type { Task } from "@/lib/firebase/database"
+import { TASK_STATUSES } from "@/lib/constants"
 
 interface KanbanBoardProps {
   tasks: Task[]
@@ -19,19 +20,19 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   const { toast } = useToast()
   const [columns, setColumns] = useState({
     todo: {
-      name: "Очікує",
+      name: TASK_STATUSES.todo.label,
       items: tasks.filter((task) => task.status === "todo"),
     },
     "in-progress": {
-      name: "В процесі",
+      name: TASK_STATUSES["in-progress"].label,
       items: tasks.filter((task) => task.status === "in-progress"),
     },
     review: {
-      name: "На перевірці",
+      name: TASK_STATUSES.review.label,
       items: tasks.filter((task) => task.status === "review"),
     },
     completed: {
-      name: "Завершено",
+      name: TASK_STATUSES.completed.label,
       items: tasks.filter((task) => task.status === "completed"),
     },
   })
@@ -40,19 +41,19 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   useState(() => {
     setColumns({
       todo: {
-        name: "Очікує",
+        name: TASK_STATUSES.todo.label,
         items: tasks.filter((task) => task.status === "todo"),
       },
       "in-progress": {
-        name: "В процесі",
+        name: TASK_STATUSES["in-progress"].label,
         items: tasks.filter((task) => task.status === "in-progress"),
       },
       review: {
-        name: "На перевірці",
+        name: TASK_STATUSES.review.label,
         items: tasks.filter((task) => task.status === "review"),
       },
       completed: {
-        name: "Завершено",
+        name: TASK_STATUSES.completed.label,
         items: tasks.filter((task) => task.status === "completed"),
       },
     })

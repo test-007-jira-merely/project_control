@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { updateTask, getProjectMembers } from "@/lib/firebase/database"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/lib/firebase/database"
+import { TASK_STATUSES } from "@/lib/constants"
 
 const formSchema = z.object({
   title: z.string().min(2, {
@@ -173,10 +174,10 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="todo">Очікує</SelectItem>
-                        <SelectItem value="in-progress">В процесі</SelectItem>
-                        <SelectItem value="review">На перевірці</SelectItem>
-                        <SelectItem value="completed">Завершено</SelectItem>
+                        <SelectItem value="todo">{TASK_STATUSES.todo.label}</SelectItem>
+                        <SelectItem value="in-progress">{TASK_STATUSES["in-progress"].label}</SelectItem>
+                        <SelectItem value="review">{TASK_STATUSES.review.label}</SelectItem>
+                        <SelectItem value="completed">{TASK_STATUSES.completed.label}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
