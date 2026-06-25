@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Plus, FilterX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,6 +9,7 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { TaskFilters, type TaskFilterState } from "@/components/tasks/task-filters"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +21,11 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [filters, setFilters] = useState<TaskFilterState>({
+    search: "",
+    status: "all",
+    priority: "all",
+  })
 
   const fetchTasks = async () => {
     try {
@@ -33,7 +39,6 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   }
 
   useEffect(() => {
-
     fetchTasks()
   }, [projectId])
 
@@ -49,6 +54,22 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
     fetchTasks();
   }
 
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesSearch =
+        filters.search === "" ||
+        task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        task.description.toLowerCase().includes(filters.search.toLowerCase())
+
+      const matchesStatus = filters.status === "all" || task.status === filters.status
+      const matchesPriority = filters.priority === "all" || task.priority === filters.priority
+
+      return matchesSearch && matchesStatus && matchesPriority
+    })
+  }, [tasks, filters])
+
+  const clearFilters = () => setFilters({ search: "", status: "all", priority: "all" })
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between">
@@ -60,6 +81,14 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           </Button>
         )}
       </div>
+
+      {!loading && tasks.length > 0 && (
+        <TaskFilters
+          filters={filters}
+          onFilterChange={setFilters}
+          onClear={clearFilters}
+        />
+      )}
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
@@ -75,14 +104,7 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
-            <KanbanBoard
-            tasks={tasks}
-            onTaskUpdated={handleTaskUpdated}
-            onTaskDeleted={handleTaskDeleted}
-            loading={loading}
-          />
-          ) : (
+          ) : tasks.length === 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Немає задач</CardTitle>
@@ -97,6 +119,26 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 )}
               </CardContent>
             </Card>
+          ) : filteredTasks.length === 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Не знайдено задач</CardTitle>
+                <CardDescription>Жодна задача не відповідає вибраним фільтрам.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={clearFilters} variant="outline">
+                  <FilterX className="mr-2 h-4 w-4" />
+                  Скинути фільтри
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <KanbanBoard
+              tasks={filteredTasks}
+              onTaskUpdated={handleTaskUpdated}
+              onTaskDeleted={handleTaskDeleted}
+              loading={loading}
+            />
           )}
         </TabsContent>
         <TabsContent value="list" className="space-y-4">
@@ -108,18 +150,7 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onTaskUpdated={handleTaskUpdated}
-                  onTaskDeleted={handleTaskDeleted}
-                />
-              ))}
-            </div>
-          ) : (
+          ) : tasks.length === 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Немає задач</CardTitle>
@@ -134,6 +165,30 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 )}
               </CardContent>
             </Card>
+          ) : filteredTasks.length === 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Не знайдено задач</CardTitle>
+                <CardDescription>Жодна задача не відповідає вибраним фільтрам.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={clearFilters} variant="outline">
+                  <FilterX className="mr-2 h-4 w-4" />
+                  Скинути фільтри
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onTaskUpdated={handleTaskUpdated}
+                  onTaskDeleted={handleTaskDeleted}
+                />
+              ))}
+            </div>
           )}
         </TabsContent>
       </Tabs>
