@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
+import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import { useToast } from "@/components/ui/use-toast"
 import type { Task } from "@/lib/firebase/database"
 
@@ -19,19 +20,19 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   const { toast } = useToast()
   const [columns, setColumns] = useState({
     todo: {
-      name: "Очікує",
+      name: TASK_STATUS_LABELS.todo,
       items: tasks.filter((task) => task.status === "todo"),
     },
     "in-progress": {
-      name: "В процесі",
+      name: TASK_STATUS_LABELS["in-progress"],
       items: tasks.filter((task) => task.status === "in-progress"),
     },
     review: {
-      name: "На перевірці",
+      name: TASK_STATUS_LABELS.review,
       items: tasks.filter((task) => task.status === "review"),
     },
     completed: {
-      name: "Завершено",
+      name: TASK_STATUS_LABELS.completed,
       items: tasks.filter((task) => task.status === "completed"),
     },
   })
@@ -40,19 +41,19 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   useState(() => {
     setColumns({
       todo: {
-        name: "Очікує",
+        name: TASK_STATUS_LABELS.todo,
         items: tasks.filter((task) => task.status === "todo"),
       },
       "in-progress": {
-        name: "В процесі",
+        name: TASK_STATUS_LABELS["in-progress"],
         items: tasks.filter((task) => task.status === "in-progress"),
       },
       review: {
-        name: "На перевірці",
+        name: TASK_STATUS_LABELS.review,
         items: tasks.filter((task) => task.status === "review"),
       },
       completed: {
-        name: "Завершено",
+        name: TASK_STATUS_LABELS.completed,
         items: tasks.filter((task) => task.status === "completed"),
       },
     })

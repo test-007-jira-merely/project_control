@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { TaskEditDialog } from "@/components/tasks/task-edit-dialog"
 import { deleteTask } from "@/lib/firebase/database"
+import { TASK_STATUS_META } from "@/lib/task-status"
 import { useToast } from "@/components/ui/use-toast"
 import type { Task } from "@/lib/firebase/database"
 
@@ -35,13 +36,6 @@ export function TaskCard({ task, onTaskUpdated, onTaskDeleted }: TaskCardProps) 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const statusMap = {
-    todo: { label: "Очікує", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-    "in-progress": { label: "В процесі", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-    review: { label: "На перевірці", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-    completed: { label: "Завершено", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-  }
-
   const priorityMap = {
     low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
     medium: { label: "Середній", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
@@ -49,7 +43,7 @@ export function TaskCard({ task, onTaskUpdated, onTaskDeleted }: TaskCardProps) 
     urgent: { label: "Терміновий", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
   }
 
-  const status = statusMap[task.status] || statusMap.todo
+  const status = TASK_STATUS_META[task.status] || TASK_STATUS_META.todo
   const priority = priorityMap[task.priority] || priorityMap.medium
 
   const handleDelete = async () => {
