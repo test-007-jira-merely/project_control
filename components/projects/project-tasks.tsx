@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,8 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { useDebounce } from "@/hooks/use-debounce"
+import { TaskFilterToolbar } from "@/components/tasks/task-filter-toolbar"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +22,14 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  // Filter state
+  const [searchText, setSearchText] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
+  const [assignedToFilter, setAssignedToFilter] = useState<string | null>(null)
+
+  const debouncedSearchText = useDebounce(searchText, 300)
 
   const fetchTasks = async () => {
     try {
@@ -49,6 +59,56 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
     fetchTasks();
   }
 
+  // Filtering logic - single-pass for efficiency
+  const filteredTasks = useMemo(() => {
+    if (!debouncedSearchText && !statusFilter && !priorityFilter && !assignedToFilter) {
+      return tasks
+    }
+
+    const searchLower = debouncedSearchText?.toLowerCase()
+
+    return tasks.filter((task) => {
+      // Search filter (title OR description, case-insensitive)
+      if (searchLower) {
+        const titleMatch = task.title.toLowerCase().includes(searchLower)
+        const descMatch = task.description?.toLowerCase().includes(searchLower)
+        if (!titleMatch && !descMatch) return false
+      }
+
+      // Status filter
+      if (statusFilter && task.status !== statusFilter) return false
+
+      // Priority filter
+      if (priorityFilter && task.priority !== priorityFilter) return false
+
+      // Assignee filter
+      if (assignedToFilter) {
+        if (assignedToFilter === "unassigned") {
+          if (task.assignedTo !== null) return false
+        } else {
+          if (task.assignedTo !== assignedToFilter) return false
+        }
+      }
+
+      return true
+    })
+  }, [tasks, debouncedSearchText, statusFilter, priorityFilter, assignedToFilter])
+
+  const hasActiveFilters = Boolean(debouncedSearchText || statusFilter || priorityFilter || assignedToFilter)
+
+  const handleClearFilters = () => {
+    setSearchText("")
+    setStatusFilter(null)
+    setPriorityFilter(null)
+    setAssignedToFilter(null)
+  }
+
+  // Empty state messages - extracted to avoid duplication across tabs
+  const emptyStateTitle = hasActiveFilters ? "Немає задач, що відповідають фільтрам" : "Немає задач"
+  const emptyStateDescription = hasActiveFilters
+    ? "Спробуйте змінити критерії пошуку або скинути фільтри."
+    : "У цьому проекті ще немає задач."
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between">
@@ -60,6 +120,19 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           </Button>
         )}
       </div>
+
+      <TaskFilterToolbar
+        searchText={searchText}
+        status={statusFilter}
+        priority={priorityFilter}
+        assignedTo={assignedToFilter}
+        onSearchChange={setSearchText}
+        onStatusChange={setStatusFilter}
+        onPriorityChange={setPriorityFilter}
+        onAssignedToChange={setAssignedToFilter}
+        onClearFilters={handleClearFilters}
+        projectId={projectId}
+      />
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
@@ -75,9 +148,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskUpdated={handleTaskUpdated}
             onTaskDeleted={handleTaskDeleted}
             loading={loading}
@@ -85,11 +158,11 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardTitle>{emptyStateTitle}</CardTitle>
+                <CardDescription>{emptyStateDescription}</CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {!hasActiveFilters && canEdit && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
@@ -108,9 +181,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -122,11 +195,11 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardTitle>{emptyStateTitle}</CardTitle>
+                <CardDescription>{emptyStateDescription}</CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {!hasActiveFilters && canEdit && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
