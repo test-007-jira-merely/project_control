@@ -9,6 +9,8 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { useMemo } from "react"
+import { TaskFilters, TaskFilterState, defaultTaskFilterState } from "@/components/tasks/task-filters"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +22,17 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilterState)
+
+  const filteredTasks = useMemo(() => {
+    const q = filters.searchQuery.toLowerCase()
+    return tasks.filter(task => {
+      if (filters.statusFilter !== "all" && task.status !== filters.statusFilter) return false
+      if (filters.priorityFilter !== "all" && task.priority !== filters.priorityFilter) return false
+      if (q && !task.title.toLowerCase().includes(q) && !task.description.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [tasks, filters])
 
   const fetchTasks = async () => {
     try {
@@ -61,6 +74,12 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
         )}
       </div>
 
+      <TaskFilters
+        filters={filters}
+        setFilters={setFilters}
+        onClear={() => setFilters(defaultTaskFilterState)}
+      />
+
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
@@ -77,7 +96,7 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
             </div>
           ) : tasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskUpdated={handleTaskUpdated}
             onTaskDeleted={handleTaskDeleted}
             loading={loading}
@@ -109,16 +128,22 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
               ))}
             </div>
           ) : tasks.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onTaskUpdated={handleTaskUpdated}
-                  onTaskDeleted={handleTaskDeleted}
-                />
-              ))}
-            </div>
+            filteredTasks.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onTaskUpdated={handleTaskUpdated}
+                    onTaskDeleted={handleTaskDeleted}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-md border border-dashed p-4 text-muted-foreground">
+                За вашими фільтрами не знайдено жодної задачі.
+              </div>
+            )
           ) : (
             <Card>
               <CardHeader>

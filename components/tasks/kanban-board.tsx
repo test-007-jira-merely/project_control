@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -37,7 +37,7 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
   })
 
   // Оновлюємо колонки при зміні задач
-  useState(() => {
+  useEffect(() => {
     setColumns({
       todo: {
         name: "Очікує",
@@ -56,7 +56,7 @@ export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: Ka
         items: tasks.filter((task) => task.status === "completed"),
       },
     })
-  })
+  }, [tasks])
 
   const priorityMap = {
     low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
