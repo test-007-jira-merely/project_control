@@ -9,6 +9,7 @@ import { getProjectTasks } from "@/lib/firebase/database"
 import { TaskCreateDialog } from "@/components/tasks/task-create-dialog"
 import { TaskCard } from "@/components/tasks/task-card"
 import { KanbanBoard } from "@/components/tasks/kanban-board"
+import { TaskFilterToolbar } from "@/components/tasks/task-filter-toolbar"
 import type { Task } from "@/lib/firebase/database"
 
 interface ProjectTasksProps {
@@ -20,6 +21,10 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [priorityFilter, setPriorityFilter] = useState("all")
 
   const fetchTasks = async () => {
     try {
@@ -49,6 +54,25 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
     fetchTasks();
   }
 
+  const clearFilters = () => {
+    setSearchQuery("")
+    setStatusFilter("all")
+    setPriorityFilter("all")
+  }
+
+  const filteredTasks = tasks.filter((task) => {
+    const searchLower = searchQuery.toLowerCase()
+    const matchesSearch =
+      !searchQuery ||
+      task.title.toLowerCase().includes(searchLower) ||
+      task.description.toLowerCase().includes(searchLower)
+    const matchesStatus = statusFilter === "all" || task.status === statusFilter
+    const matchesPriority =
+      priorityFilter === "all" || task.priority === priorityFilter
+
+    return matchesSearch && matchesStatus && matchesPriority
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between">
@@ -60,6 +84,16 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
           </Button>
         )}
       </div>
+
+      <TaskFilterToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        priorityFilter={priorityFilter}
+        onPriorityChange={setPriorityFilter}
+        onClearFilters={clearFilters}
+      />
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList>
@@ -75,9 +109,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskUpdated={handleTaskUpdated}
             onTaskDeleted={handleTaskDeleted}
             loading={loading}
@@ -86,13 +120,22 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardDescription>
+                  {tasks.length > 0
+                    ? "Немає задач, що відповідають вибраним фільтрам."
+                    : "У цьому проекті ще немає задач."}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {canEdit && tasks.length === 0 && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
+                  </Button>
+                )}
+                {tasks.length > 0 && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    Очистити фільтри
                   </Button>
                 )}
               </CardContent>
@@ -108,9 +151,9 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
                 </div>
               ))}
             </div>
-          ) : tasks.length > 0 ? (
+          ) : filteredTasks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
@@ -123,13 +166,22 @@ export function ProjectTasks({ projectId, canEdit }: ProjectTasksProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Немає задач</CardTitle>
-                <CardDescription>У цьому проекті ще немає задач.</CardDescription>
+                <CardDescription>
+                  {tasks.length > 0
+                    ? "Немає задач, що відповідають вибраним фільтрам."
+                    : "У цьому проекті ще немає задач."}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {canEdit && (
+                {canEdit && tasks.length === 0 && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Створити першу задачу
+                  </Button>
+                )}
+                {tasks.length > 0 && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    Очистити фільтри
                   </Button>
                 )}
               </CardContent>
