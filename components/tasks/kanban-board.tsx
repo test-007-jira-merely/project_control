@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { updateTask } from "@/lib/firebase/database"
 import { useToast } from "@/components/ui/use-toast"
+import { priorityMap } from "@/components/tasks/task-filters"
 import type { Task } from "@/lib/firebase/database"
 
 interface KanbanBoardProps {
@@ -15,113 +16,69 @@ interface KanbanBoardProps {
   loading: boolean
 }
 
+type KanbanColumnId = Task["status"]
+
+type KanbanColumn = {
+  name: string
+  items: Task[]
+}
+
+const columnMetadata: Record<KanbanColumnId, string> = {
+  todo: "Очікує",
+  "in-progress": "В процесі",
+  review: "На перевірці",
+  completed: "Завершено",
+}
+
+function buildColumns(tasks: Task[]): Record<KanbanColumnId, KanbanColumn> {
+  const columns: Record<KanbanColumnId, KanbanColumn> = {
+    todo: { name: columnMetadata.todo, items: [] },
+    "in-progress": { name: columnMetadata["in-progress"], items: [] },
+    review: { name: columnMetadata.review, items: [] },
+    completed: { name: columnMetadata.completed, items: [] },
+  }
+
+  tasks.forEach((task) => {
+    if (columns[task.status]) {
+      columns[task.status].items.push(task)
+    }
+  })
+
+  return columns
+}
+
 export function KanbanBoard({ tasks, onTaskUpdated, onTaskDeleted, loading }: KanbanBoardProps) {
   const { toast } = useToast()
-  const [columns, setColumns] = useState({
-    todo: {
-      name: "Очікує",
-      items: tasks.filter((task) => task.status === "todo"),
-    },
-    "in-progress": {
-      name: "В процесі",
-      items: tasks.filter((task) => task.status === "in-progress"),
-    },
-    review: {
-      name: "На перевірці",
-      items: tasks.filter((task) => task.status === "review"),
-    },
-    completed: {
-      name: "Завершено",
-      items: tasks.filter((task) => task.status === "completed"),
-    },
-  })
 
-  // Оновлюємо колонки при зміні задач
-  useState(() => {
-    setColumns({
-      todo: {
-        name: "Очікує",
-        items: tasks.filter((task) => task.status === "todo"),
-      },
-      "in-progress": {
-        name: "В процесі",
-        items: tasks.filter((task) => task.status === "in-progress"),
-      },
-      review: {
-        name: "На перевірці",
-        items: tasks.filter((task) => task.status === "review"),
-      },
-      completed: {
-        name: "Завершено",
-        items: tasks.filter((task) => task.status === "completed"),
-      },
-    })
-  })
-
-  const priorityMap = {
-    low: { label: "Низький", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-    medium: { label: "Середній", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-    high: { label: "Високий", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" },
-    urgent: { label: "Терміновий", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-  }
+  // Use useMemo to derive columns from tasks to avoid extra render cycles and redundant state.
+  const columns = useMemo(() => buildColumns(tasks), [tasks])
 
   const onDragEnd = async (result: any) => {
     if (!result.destination) return
 
     const { source, destination } = result
+    const sourceColumnId = source.droppableId as KanbanColumnId
+    const destinationColumnId = destination.droppableId as KanbanColumnId
 
-    if (source.droppableId === destination.droppableId) {
-      // Переміщення в межах однієї колонки
-      const column = columns[source.droppableId as keyof typeof columns]
-      const copiedItems = [...column.items]
-      const [removed] = copiedItems.splice(source.index, 1)
-      copiedItems.splice(destination.index, 0, removed)
+    if (sourceColumnId === destinationColumnId) {
+      // Internal reordering not implemented as there's no order field in the schema.
+      return
+    }
 
-      setColumns({
-        ...columns,
-        [source.droppableId]: {
-          ...column,
-          items: copiedItems,
-        },
+    const sourceColumn = columns[sourceColumnId]
+    const removed = sourceColumn.items[source.index]
+    const updatedTask = { ...removed, status: destinationColumnId }
+
+    try {
+      const result = await updateTask(updatedTask.id!, { status: updatedTask.status })
+      onTaskUpdated(result as Task)
+    } catch (error) {
+      console.error("Error updating task status:", error)
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Не вдалося оновити статус задачі.",
       })
-    } else {
-      // Переміщення між колонками
-      const sourceColumn = columns[source.droppableId as keyof typeof columns]
-      const destColumn = columns[destination.droppableId as keyof typeof columns]
-      const sourceItems = [...sourceColumn.items]
-      const destItems = [...destColumn.items]
-      const [removed] = sourceItems.splice(source.index, 1)
-
-      // Оновлюємо статус задачі
-      const updatedTask = { ...removed, status: destination.droppableId as Task["status"] }
-
-      // Додаємо задачу до нової колонки
-      destItems.splice(destination.index, 0, updatedTask)
-
-      setColumns({
-        ...columns,
-        [source.droppableId]: {
-          ...sourceColumn,
-          items: sourceItems,
-        },
-        [destination.droppableId]: {
-          ...destColumn,
-          items: destItems,
-        },
-      })
-
-      // Зберігаємо зміни в базі даних
-      try {
-        const result = await updateTask(updatedTask.id!, { status: updatedTask.status })
-        onTaskUpdated(result as Task)
-      } catch (error) {
-        console.error("Error updating task status:", error)
-        toast({
-          variant: "destructive",
-          title: "Помилка",
-          description: "Не вдалося оновити статус задачі.",
-        })
-      }
     }
   }
 
