@@ -51,8 +51,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [members, setMembers] = useState<any[]>([])
-  
-  // Use "unassigned" as the value for no assignee instead of empty string
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,7 +59,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo || "unassigned",
       dueDate: task.dueDate || undefined,
     },
   })
@@ -87,7 +86,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
       description: task.description,
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo || "unassigned", // Use "unassigned" instead of empty string
+      assignedTo: task.assignedTo || "unassigned",
       dueDate: task.dueDate || undefined,
     })
   }, [form, task])
@@ -101,7 +100,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
         description: values.description,
         status: values.status,
         priority: values.priority,
-        assignedTo: values.assignedTo === "unassigned" ? null : values.assignedTo, // Handle the unassigned case
+        assignedTo: values.assignedTo === "unassigned" ? null : values.assignedTo,
         dueDate: values.dueDate || null,
       })
 
@@ -207,6 +206,31 @@ export function TaskEditDialog({ open, onOpenChange, task, onTaskUpdated }: Task
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="assignedTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Виконавець</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Без виконавця" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Без виконавця</SelectItem>
+                      {members.map((member) => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.userName || member.userEmail || member.userId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="dueDate"
